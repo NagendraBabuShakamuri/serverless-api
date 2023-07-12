@@ -1,6 +1,5 @@
-// const AWS = require("aws-sdk");
-// const uuid = require('uuid');
-// const os = require('os');
+const AWS = require("aws-sdk");
+const uuid = require('uuid');
 
 const validator = require("email-validator");
 
@@ -16,7 +15,7 @@ const health = async (req, res) => {
 }
 
 const getUser = async (req, res) => {
-    let userId = req.params.userId;
+   let userId = req.params.userId;
    let auth_header = req.headers.authorization;
    if(!auth_header)
    {
@@ -715,7 +714,7 @@ function uploadImage(image)
 {
     return new Promise(async (resolve, reject) => {
         AWS.config.update({
-            region: process.env.AWS_DEFAULT_REGION
+            region: process.env.REGION
         });
         const s3 = new AWS.S3();
         const fileContent = Buffer.from(image.data, 'binary');
@@ -837,7 +836,7 @@ function deleteImage(key)
 {
     return new Promise(async (resolve, reject) => {
         AWS.config.update({
-            region: process.env.AWS_DEFAULT_REGION
+            region: process.env.REGION
         });
         var s3 = new AWS.S3();
         var params = {  Bucket: process.env.S3_BUCKET, Key: key };
@@ -845,7 +844,6 @@ function deleteImage(key)
         s3.deleteObject(params, function(err, data) {
         if (err)
         {
-            logger.error(`${err}`);
             reject(err);            
         }            
         else     
