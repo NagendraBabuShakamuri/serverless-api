@@ -92,11 +92,16 @@ resource "aws_rds_cluster" "aurora_cluster" {
   }
 }
 
+output "rds_output" {
+  value = aws_rds_cluster.aurora_cluster.master_user_secret[0].secret_arn
+}
+
 resource "aws_rds_cluster_instance" "aurora_instance" {
   cluster_identifier = aws_rds_cluster.aurora_cluster.id
   instance_class     = "db.serverless"
   engine             = aws_rds_cluster.aurora_cluster.engine
   engine_version     = aws_rds_cluster.aurora_cluster.engine_version  
+  publicly_accessible = true
 }
 
 # Generate a random name for the S3 bucket.
@@ -189,6 +194,24 @@ resource "aws_iam_policy" "aurora_policy" {
     })
 }
 
+resource "aws_iam_policy" "lambda_rds_secret_policy" {
+  name_prefix = "LambdaRdsSecretPolicy-"
+
+  # Define permissions for accessing the Aurora secret in AWS Secrets Manager
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Action = [
+          "secretsmanager:GetSecretValue",
+        ],
+        Effect = "Allow",
+        Resource = aws_rds_cluster.aurora_cluster.master_user_secret[0].secret_arn,
+      },
+    ],
+  })
+}
+
 # Create an IAM Role for S3 Access.
 
 resource "aws_iam_role" "lambda_s3_aurora" {
@@ -233,27 +256,32 @@ resource "aws_iam_role_policy_attachment" "lambda_basic_policy_attachment" {
 
 # Attach the policy to the created role.
 
-resource "aws_iam_role_policy_attachment" "s3_access_role_attachment" {
-  policy_arn = aws_iam_policy.S3_policy.arn
+resource "aws_iam_role_policy_attachment" "role_attachment" {
+  for_each = {
+    "s3": aws_iam_policy.S3_policy.arn,
+    "aurora": aws_iam_policy.aurora_policy.arn,
+    "eni": aws_iam_policy.lambda_eni_policy.arn,
+    "secret": aws_iam_policy.lambda_rds_secret_policy.arn
+  }
+  policy_arn = each.value
   role       = aws_iam_role.lambda_s3_aurora.name
 }
 
-resource "aws_iam_role_policy_attachment" "aurora_access_role_attachment" {
-  policy_arn = aws_iam_policy.aurora_policy.arn
-  role       = aws_iam_role.lambda_s3_aurora.name
+data "aws_secretsmanager_secret_version" "by-arn" {
+  secret_id = aws_rds_cluster.aurora_cluster.master_user_secret[0].secret_arn
 }
 
-resource "aws_iam_role_policy_attachment" "eni_access_role_attachment" {
-  policy_arn = aws_iam_policy.lambda_eni_policy.arn
-  role       = aws_iam_role.lambda_s3_aurora.name
+output "secret" {
+  value = data.aws_secretsmanager_secret_version.by-arn.secret_string
+  sensitive = true
 }
 
 resource "aws_lambda_function" "api_lambda" {
-  filename      = "app.zip"
+  filename      = "~/Documents/app.zip"
   function_name = "serverless_api"
   role          = aws_iam_role.lambda_s3_aurora.arn
   handler       = "index.handler"
-  source_code_hash = filebase64sha256("app.zip")
+  source_code_hash = filebase64sha256("~/Documents/app.zip")
 
   runtime = "nodejs16.x"
 
@@ -265,131 +293,24 @@ resource "aws_lambda_function" "api_lambda" {
   environment {
     variables = {
       ENVIRONMENT = "lambda"
-      S3_BUCKET = "${aws_s3_bucket.private_bucket.id}"
-      REGION = "${var.region}"
-      USER_NAME = "${aws_rds_cluster.aurora_cluster.master_username}"
-      HOST = "${aws_rds_cluster.aurora_cluster.endpoint}"
-      DATABASE = "${aws_rds_cluster.aurora_cluster.database_name}"
-      MASTER_CREDENTIALS_ARN = "${aws_rds_cluster.aurora_cluster.master_user_secret[0].secret_arn}"
+      S3_BUCKET = aws_s3_bucket.private_bucket.id
+      REGION = var.region
+      USER_NAME = aws_rds_cluster.aurora_cluster.master_username
+      HOST = aws_rds_cluster.aurora_cluster.endpoint
+      DATABASE = aws_rds_cluster.aurora_cluster.database_name
+      SECRET = jsondecode(data.aws_secretsmanager_secret_version.by-arn.secret_string)["password"]
     }
   }
 }
 
-resource "aws_lambda_permission" "healthz_permission" {
-  statement_id  = "healthz_permission"
+resource "aws_lambda_permission" "permissions" {
+  for_each = var.lambda_permission_arns
+  statement_id  = each.key
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.api_lambda.arn
   principal     = "apigateway.amazonaws.com"
 
-  source_arn = "${aws_api_gateway_rest_api.api_gateway.execution_arn}/*/GET/healthz"
-}
-
-resource "aws_lambda_permission" "create_user_permission" {
-  statement_id  = "create_user_permission"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.api_lambda.arn
-  principal     = "apigateway.amazonaws.com"
-
-  source_arn = "${aws_api_gateway_rest_api.api_gateway.execution_arn}/*/POST/v1/user"
-}
-
-resource "aws_lambda_permission" "get_user_permission" {
-  statement_id  = "get_user_permission"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.api_lambda.arn
-  principal     = "apigateway.amazonaws.com"
-
-  source_arn = "${aws_api_gateway_rest_api.api_gateway.execution_arn}/*/GET/v1/user/*"
-}
-
-resource "aws_lambda_permission" "update_user_permission" {
-  statement_id  = "update_user_permission"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.api_lambda.arn
-  principal     = "apigateway.amazonaws.com"
-
-  source_arn = "${aws_api_gateway_rest_api.api_gateway.execution_arn}/*/PUT/v1/user/*"
-}
-
-resource "aws_lambda_permission" "get_product_permission" {
-  statement_id  = "get_product_permission"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.api_lambda.arn
-  principal     = "apigateway.amazonaws.com"
-
-  source_arn = "${aws_api_gateway_rest_api.api_gateway.execution_arn}/*/GET/v1/product/*"
-}
-
-resource "aws_lambda_permission" "create_product_permission" {
-  statement_id  = "create_product_permission"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.api_lambda.arn
-  principal     = "apigateway.amazonaws.com"
-
-  source_arn = "${aws_api_gateway_rest_api.api_gateway.execution_arn}/*/POST/v1/product"
-}
-
-resource "aws_lambda_permission" "put_product_permission" {
-  statement_id  = "put_product_permission"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.api_lambda.arn
-  principal     = "apigateway.amazonaws.com"
-
-  source_arn = "${aws_api_gateway_rest_api.api_gateway.execution_arn}/*/PUT/v1/product/*"
-}
-
-resource "aws_lambda_permission" "patch_product_permission" {
-  statement_id  = "patch_product_permission"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.api_lambda.arn
-  principal     = "apigateway.amazonaws.com"
-
-  source_arn = "${aws_api_gateway_rest_api.api_gateway.execution_arn}/*/PATCH/v1/product/*"
-}
-
-resource "aws_lambda_permission" "delete_product_permission" {
-  statement_id  = "delete_product_permission"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.api_lambda.arn
-  principal     = "apigateway.amazonaws.com"
-
-  source_arn = "${aws_api_gateway_rest_api.api_gateway.execution_arn}/*/DELETE/v1/product/*"
-}
-
-resource "aws_lambda_permission" "get_images_permission" {
-  statement_id  = "get_images_permission"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.api_lambda.arn
-  principal     = "apigateway.amazonaws.com"
-
-  source_arn = "${aws_api_gateway_rest_api.api_gateway.execution_arn}/*/GET/v1/product/*/image"
-}
-
-resource "aws_lambda_permission" "get_image_permission" {
-  statement_id  = "get_image_permission"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.api_lambda.arn
-  principal     = "apigateway.amazonaws.com"
-
-  source_arn = "${aws_api_gateway_rest_api.api_gateway.execution_arn}/*/GET/v1/product/*/image/*"
-}
-
-resource "aws_lambda_permission" "upload_image_permission" {
-  statement_id  = "upload_image_permission"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.api_lambda.arn
-  principal     = "apigateway.amazonaws.com"
-
-  source_arn = "${aws_api_gateway_rest_api.api_gateway.execution_arn}/*/POST/v1/product/*/image"
-}
-
-resource "aws_lambda_permission" "delete_image_permission" {
-  statement_id  = "delete_image_permission"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.api_lambda.arn
-  principal     = "apigateway.amazonaws.com"
-
-  source_arn = "${aws_api_gateway_rest_api.api_gateway.execution_arn}/*/DELETE/v1/product/*/image/*"
+  source_arn = "${aws_api_gateway_rest_api.api_gateway.execution_arn}/*${each.value}"
 }
 
 resource "aws_api_gateway_rest_api" "api_gateway" {
