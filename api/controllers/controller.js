@@ -6,6 +6,7 @@ const validator = require("email-validator");
 const get = require(__dirname + "/get.js");
 const post = require(__dirname + "/post.js");
 const put = require(__dirname + "/put.js");
+const del = require(__dirname + "/delete.js");
 
 const saltRounds = 10;
 
@@ -634,7 +635,6 @@ const getProductImage = async (req, res) => {
     {
         res.status(401);
         res.send({"Status": 401, "Message": "Please provide an Auth token."});
-        logger.info(`Authentication failed, Auth token is not provided to access the image (id: ${imageId}) of product (id: ${productId}).`);
         return;
     }
     const [username, password] = Buffer.from(auth_header.replace('Basic ', ''), 'base64').toString('utf8').replace(':', ',').split(',');
@@ -642,7 +642,6 @@ const getProductImage = async (req, res) => {
     {
         res.status(401);
         res.send({"Status": 401, "Message": "Username or Password is Invalid."});
-        logger.info(`Authentication failed, Username and password fields are empty to access the image (id: ${imageId}) of product (id: ${productId}).`);
         return;
     }
     let response = await get.getUserDetails(username);
@@ -665,48 +664,41 @@ const getProductImage = async (req, res) => {
                         {
                             res.status(200);
                             res.send(imageExists);
-                            logger.info(`User successfully accessed the image (id: ${imageId}) of product (id: ${productId}).`);
                         }
                         else 
                         {
                             res.status(404);
                             res.send({"Status": 404, "Message": "Image not found for the given product."});
-                            logger.info(`Image (id: ${imageId}) for product (id: ${productId}) does not exist.`);
                         }                        
                     }
                     else 
                     {
                         res.status(404);
                         res.send({"Status": 404, "Message": "Image with the given Id does not exist."});
-                        logger.info(`Image (id: ${imageId}) does not exist for any product.`);
                     }                    
                 }
                 else
                 {
                     res.status(403);
                     res.send({"Status": 403, "Message": "User doesn't have access to view this product's images."});
-                    logger.info(`Authorization failed, User doesn't have access to view the image (id: ${imageId}) for product (id: ${productId}).`);
                 }
             }
             else
             {
                 res.status(404);
                 res.send({"Status": 404, "Message": "Product with the given Id does not exist."});
-                logger.info(`Product with product_id: ${productId} does not exist.`);
             }
         }
         else
         {
             res.status(401);
             res.send({"Status": 401, "Message": "Username or Password is Incorrect."});
-            logger.info(`Authentication failed , Username or Password is Incorrect to access the image (id: ${imageId}) for product (id: ${productId}).`);
         }
     }
     else
     {
         res.status(401);
         res.send({"Status": 401, "Message": "Username or Password is Incorrect."});
-        logger.info(`Authentication failed , Username or Password is Incorrect to access the image (id: ${imageId}) for product (id: ${productId}).`);
     }
 }
 
@@ -774,7 +766,7 @@ const uploadProductImage = async (req, res) => {
                             };
                             if(isObject(req.files.image))
                             {
-                                if(req.files.image.mimetype !== 'image/jpeg' && req.files.image.mimetype !== 'image/jpg' && req.files.image.mimetype === 'image/png')
+                                if(req.files.image.mimetype !== 'image/jpeg' && req.files.image.mimetype !== 'image/jpg' && req.files.image.mimetype !== 'image/png')
                                 {
                                     res.status(400);
                                     res.send({"Status": 400, "Message": "Only the file formats JPG, JPEG and PNG are allowed."});

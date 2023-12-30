@@ -4,7 +4,8 @@ const Op = require('sequelize').Op;
 
 exports.updateUser = function(password, first_name, last_name, userId) {
     return new Promise(async (resolve, reject) => {
-        User.update(
+        const userModel = await User;
+        userModel.update(
             {
                 password: password,
                 first_name: first_name,
@@ -22,7 +23,8 @@ exports.updateUser = function(password, first_name, last_name, userId) {
 exports.skuExists = function(sku, id)
 {
     return new Promise(async (resolve, reject) => {
-        Product.findOne(
+        const productModel = await Product;
+        productModel.findOne(
             {
                 where:
                     {
@@ -40,7 +42,8 @@ exports.skuExists = function(sku, id)
 
 exports.updateProduct = function(updateSchema, productId, res) {
     return new Promise(async (resolve, reject) => {
-        Product.update(
+        const productModel = await Product;
+        productModel.update(
             updateSchema,
             { where: { id: productId } }
         ).then(res => {
