@@ -2,8 +2,9 @@ const Product = require(__dirname + "/../models/Product.js");
 const ProductImage = require(__dirname + "/../models/ProductImage.js");
 
 exports.deleteProduct = function(productId){
-    return new Promise(async (resolve, reject) => {       
-        Product.destroy({
+    return new Promise(async (resolve, reject) => {  
+        const productModel = await Product;     
+        productModel.destroy({
             where: {
                 id : productId
             }
@@ -17,7 +18,8 @@ exports.deleteProduct = function(productId){
 
 exports.productExists = function(productId){
     return new Promise(async (resolve, reject) => {
-        Product.findOne({
+        const productModel = await Product; 
+        productModel.findOne({
             where: {
                 id : productId
             }
@@ -31,7 +33,8 @@ exports.productExists = function(productId){
 
 exports.isUserProduct = function(productId, userId){
     return new Promise(async (resolve, reject) => {
-        Product.findOne({
+        const productModel = await Product; 
+        productModel.findOne({
             where: {
                 id : productId,
                 owner_user_id: userId
@@ -46,7 +49,8 @@ exports.isUserProduct = function(productId, userId){
 
 exports.deleteProductImage = function(imageId){
     return new Promise(async (resolve, reject) => {
-        ProductImage.destroy({
+        const productImageModel = await ProductImage;
+        productImageModel.destroy({
             where: {
                 image_id : imageId
             }
@@ -60,7 +64,8 @@ exports.deleteProductImage = function(imageId){
 
 exports.deleteProductImages = function(productId){
     return new Promise(async (resolve, reject) => {
-        ProductImage.destroy({
+        const productImageModel = await ProductImage;
+        productImageModel.destroy({
             where: {
                 product_id : productId
             }

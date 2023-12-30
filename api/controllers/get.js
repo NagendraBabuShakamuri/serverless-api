@@ -5,7 +5,8 @@ const bcrypt = require("bcryptjs");
 
 exports.getUserDetails = function(user_name){
     return new Promise(async (resolve, reject) => {
-        User.findOne({
+        const userModel = await User;
+        userModel.findOne({
             where: {
                 username : user_name
             }
@@ -34,7 +35,8 @@ exports.isPasswordSame = function(user_pass, result){
 
 exports.getProductDetails = function(productId){
     return new Promise(async (resolve, reject) => {
-        Product.findOne({
+        const productModel = await Product;
+        productModel.findOne({
             where: {
                 id : productId
             }
@@ -48,7 +50,8 @@ exports.getProductDetails = function(productId){
 
 exports.getProductImages = function(productId){
     return new Promise(async (resolve, reject) => {
-        ProductImage.findAll({
+        const productImageModel = await ProductImage;
+        productImageModel.findAll({
             where: {
                 product_id : productId
             }
@@ -62,7 +65,8 @@ exports.getProductImages = function(productId){
 
 exports.getProductImage = function(imageId){
     return new Promise(async (resolve, reject) => {
-        ProductImage.findOne({
+        const productImageModel = await ProductImage;
+        productImageModel.findOne({
             where: {
                 image_id : imageId
             }

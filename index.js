@@ -1,7 +1,5 @@
 require('dotenv').config();
 const db = require(__dirname + "/api/services/service.js");
-require(__dirname + "/api/models/User.js")
-require(__dirname + "/api/models/Product.js")
 const bodyParser = require("body-parser");
 const express = require("express");
 const upload = require("express-fileupload");
@@ -15,10 +13,13 @@ app.use(upload());
 
 app.use('/', router);
 
-db.sync().then(() => {
-    console.log('Tables are created successfully!');
-}).catch((error) => {
-    console.log('Unable to create tables : ', error);
+db.then(db => {
+    db.sync().then(() => {
+        console.log('Tables are created successfully!');
+    }).catch((error) => {
+        console.log('Unable to create tables : ', error);
+    });
+    return db;
 });
 
 if(process.env.ENVIRONMENT == "lambda")
