@@ -1,6 +1,6 @@
 resource "aws_vpc" "dev_vpc" {
   cidr_block = var.cidr_block
-
+  enable_dns_hostnames = true
   tags = {
     Name = "${var.aws_profile}-vpc"
   }
@@ -66,22 +66,6 @@ resource "aws_vpc_endpoint" "secretsmanager" {
     Name = "Secrets Endpoint"
   }
 }
-
-# resource "aws_vpc_endpoint" "kms" {
-#   vpc_id            = aws_vpc.dev_vpc.id
-#   service_name      = "com.amazonaws.${var.region}.kms"
-#   vpc_endpoint_type = "Interface"
-
-#   security_group_ids = [
-#     aws_security_group.endpoint_sg.id,
-#   ]
-
-#   private_dns_enabled = true
-
-#   tags = {
-#     Name = "KMS Endpoint"
-#   }
-# }
 
 resource "aws_route_table" "private_route_table" {
   vpc_id = aws_vpc.dev_vpc.id
@@ -341,15 +325,6 @@ resource "aws_iam_role_policy_attachment" "role_attachment" {
   role       = aws_iam_role.lambda_s3_aurora.name
 }
 
-# data "aws_secretsmanager_secret_version" "by-arn" {
-#   secret_id = aws_rds_cluster.aurora_cluster.master_user_secret[0].secret_arn
-# }
-
-# output "secret" {
-#   value     = data.aws_secretsmanager_secret_version.by-arn.secret_string
-#   sensitive = true
-# }
-
 resource "aws_lambda_function" "api_lambda" {
   filename         = "~/Documents/app.zip"
   function_name    = "serverless_api"
@@ -369,7 +344,7 @@ resource "aws_lambda_function" "api_lambda" {
       ENVIRONMENT = "lambda"
       S3_BUCKET   = aws_s3_bucket.private_bucket.id
       REGION      = var.region
-      USER_NAME   = aws_rds_cluster.aurora_cluster.master_username
+      # USER_NAME   = aws_rds_cluster.aurora_cluster.master_username
       HOST        = aws_rds_cluster.aurora_cluster.endpoint
       DATABASE    = aws_rds_cluster.aurora_cluster.database_name
       # SECRET      = jsondecode(data.aws_secretsmanager_secret_version.by-arn.secret_string)["password"]
@@ -392,6 +367,9 @@ resource "aws_lambda_permission" "permissions" {
 resource "aws_api_gateway_rest_api" "api_gateway" {
   name        = "Inventory-Management-API"
   description = "Inventory Management API"
+  endpoint_configuration {
+    types = ["REGIONAL"]
+  }
 }
 
 resource "aws_api_gateway_resource" "healthz" {
