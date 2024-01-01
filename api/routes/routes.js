@@ -19,28 +19,44 @@ const {
 
 router.get("/healthz", health);
 
-router.get("/v1/user/:userId", getUser);
+router.get("/user/:userId", getUser);
 
-router.get("/v1/product/:productId", getProduct);
+router.get("/product/:productId", getProduct);
 
-router.get("/v1/product/:product_id/image", getProductImages);
+router.get("/product/:product_id/image", getProductImages);
 
-router.get("/v1/product/:product_id/image/:image_id", getProductImage);
+router.get("/product/:product_id/image/:image_id", getProductImage);
 
-router.post("/v1/user", createUser);
+router.post("/user", createUser);
 
-router.post("/v1/product", createProduct);
+router.post("/product", createProduct);
 
-router.post("/v1/product/:product_id/image", uploadProductImage);
+router.post("/product/:product_id/image", uploadProductImage);
 
-router.put("/v1/user/:userId", updateUser);
+router.put("/user/:userId", updateUser);
 
-router.put("/v1/product/:productId", updateFullProduct);
+router.put("/product/:productId", updateFullProduct);
 
-router.patch("/v1/product/:productId", updateProduct);
+router.patch("/product/:productId", updateProduct);
 
-router.delete("/v1/product/:productId", deleteProduct);
+router.delete("/product/:productId", deleteProduct);
 
-router.delete("/v1/product/:product_id/image/:image_id", deleteProductImage);
+router.delete("/product/:product_id/image/:image_id", deleteProductImage);
+
+router.all("/healthz", (req, res) => { res.sendStatus(405); });
+
+router.all("/user", (req, res) => { res.sendStatus(405); });
+
+router.all("/user/:userId", (req, res) => { res.sendStatus(405); });
+
+router.all("/product", (req, res) => { res.sendStatus(405); });
+
+router.all("/product/:productId", (req, res) => { res.sendStatus(405); });
+
+router.all("/product/:product_id/image", (req, res) => { res.sendStatus(405); });
+
+router.all("/product/:product_id/image/:image_id", (req, res) => { res.sendStatus(405); });
+
+router.all("*", (req, res) => { res.sendStatus(404); })
 
 module.exports = router;
