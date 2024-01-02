@@ -1,0 +1,37 @@
+name: deploy-lambda
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+       - master
+
+jobs:
+    merge:
+      if: github.event.pull_request.merged
+      runs-on: ubuntu-latest
+
+      steps:
+        - name: Checkout Git Repository
+          uses: actions/checkout@v2
+
+        - name: Set up Node.js
+          uses: actions/setup-node@v3
+          with:
+            node-version: 16
+    
+        - name: Install dependencies
+          run: npm install
+  
+        - name: Zip code
+          run: zip -r app.zip .
+
+        - name: Deploy to Lambda
+          run: |
+            aws lambda update-function-code \
+            --function-name ${{ secrets.LAMBDA_FUNC_NAME }} \
+            --zip-file fileb://app.zip
+          env:
+            AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+            AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
