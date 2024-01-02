@@ -7,7 +7,7 @@ on:
        - master
 
 jobs:
-    merge:
+    CD:
       if: github.event.pull_request.merged
       runs-on: ubuntu-latest
 
