@@ -2,6 +2,8 @@
 This Cloud Native API is designed to run on AWS Infrastructure while making use of AWS serverless services like Secrets Manager, Lambda functions, API Gateway, etc.
 <br><br>
 Terraform code to deploy the required Infra on AWS is available [here](https://github.com/NagendraBabuShakamuri/serverless-infra)
+## CI/CD:
+![Serverless-CI](https://github.com/NagendraBabuShakamuri/serverless-api/assets/114452317/fe9c8bf8-bfad-4a0f-acf7-36a39d1e325f)
 ## Prerequisites for running the application locally:
 ```javascript
 // install dependencies
